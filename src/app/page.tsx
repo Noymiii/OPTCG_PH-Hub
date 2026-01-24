@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Layers, CheckSquare, Square, Plus, Minus, Wallet, Trash2, PenTool, X, ChevronDown, ChevronRight } from 'lucide-react';
-import CardGroup from '@/components/CardGroup'; 
+import CardGroup from '@/src/components/CardGroup'; 
 import cardRawData from '@/src/data/cards.json'; 
 
 // --- TYPES ---
