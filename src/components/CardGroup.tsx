@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 
 // --- TYPES ---
 interface CardVariant {
@@ -25,11 +25,10 @@ interface Props {
 }
 
 export default function CardGroup({ card }: Props) {
-  // 1. ALWAYS CALL HOOKS AT THE TOP (Before any return statement)
+  // 1. Memoize variants
   const variants = useMemo(() => {
-    // Safety check inside useMemo to prevent crash
     if (!card || !card.variants) return [];
-    
+
     return card.variants.map((v, index) => ({
       ...v,
       variant_id: v.variant_id || `${card.card_code}-${index}`,
@@ -41,115 +40,107 @@ export default function CardGroup({ card }: Props) {
   }, [card]);
 
   const [selectedId, setSelectedId] = useState<string>('');
-  const [imgSrc, setImgSrc] = useState('https://placehold.co/400x560/png?text=No+Image');
+  const [imgError, setImgError] = useState(false);
 
-  // Get the active variant's image URL in a stable way
-  const activeVariantImageUrl = useMemo(() => {
-    if (variants.length === 0) return '';
-    const activeVariant = variants.find((v) => v.variant_id === selectedId) || variants[0];
-    return (activeVariant?.image_url || '').trim();
+  // 2. Derive active variant
+  // If selectedId is not found in variants, fall back to the first variant.
+  const activeVariant = useMemo(() => {
+    if (variants.length === 0) return null;
+    return variants.find((v) => v.variant_id === selectedId) || variants[0];
   }, [variants, selectedId]);
 
-  useEffect(() => {
-    if (variants.length > 0 && !variants.some(v => v.variant_id === selectedId)) {
-      const firstVariant = variants[0];
-      if (firstVariant?.variant_id) {
-        setSelectedId(firstVariant.variant_id);
-      }
-    }
-  }, [variants, selectedId]);
+  if (!card || !activeVariant) return null;
 
-  // Update image source when variant changes
-  useEffect(() => {
-    const newUrl = activeVariantImageUrl || 'https://placehold.co/400x560/png?text=No+Image';
-    setImgSrc(newUrl);
-  }, [activeVariantImageUrl]);
+  // 3. Computed values
+  const imageUrl = activeVariant.image_url;
+  const displayImage = (!imgError && imageUrl) ? imageUrl : 'https://placehold.co/400x560/png?text=No+Image';
 
-  // 2. NOW WE CAN DO SAFETY CHECKS (After hooks are done)
-  if (!card) return null;
-  const activeVariant = variants.find((v) => v.variant_id === selectedId) || variants[0];
-  if (!activeVariant) return null;
-
-  // 3. RENDER
   const phpPrice = Math.ceil(activeVariant.price_jpy * 0.35);
-  const displayPrice = new Intl.NumberFormat('en-PH', { 
-    style: 'currency', 
-    currency: 'PHP', 
-    minimumFractionDigits: 0 
+  const displayPrice = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 0
   }).format(phpPrice);
-  
+
   const baseName = card.base_name || card.card_code;
 
-  const handleImageError = () => {
-    setImgSrc('https://placehold.co/400x560/png?text=No+Image');
-  };
-
   return (
-    <div className="flex flex-col rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200 h-full">
+    <div className="flex flex-col rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all duration-300 border border-slate-100 group h-full">
       {/* Header */}
-      <div className="flex justify-between items-center px-3 py-2 bg-slate-50 border-b border-slate-200">
-        <span className="font-mono text-xs font-medium text-slate-600">{card.card_code}</span>
-        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-          activeVariant.rarity.includes('P-') 
-            ? 'bg-indigo-100 text-indigo-700' 
-            : 'bg-slate-100 text-slate-600'
-        }`}>
+      <div className="flex justify-between items-center px-4 py-2.5 bg-white border-b border-slate-50">
+        <span className="font-mono text-[10px] font-medium text-slate-400 tracking-wider bg-slate-50 px-1.5 py-0.5 rounded">{card.card_code}</span>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${activeVariant.rarity.includes('P-')
+          ? 'bg-indigo-50 text-indigo-600'
+          : 'bg-slate-100 text-slate-500'
+          }`}>
           {activeVariant.rarity}
         </span>
       </div>
 
       {/* Image Container */}
-      <div className="relative w-full aspect-[2.5/3.5] bg-slate-50 flex items-center justify-center overflow-hidden">
-        <div className="relative w-full h-full p-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imgSrc}
-            alt={`${baseName} - ${activeVariant.variant_name}`}
-            className="w-full h-full object-contain transition-transform duration-300 hover:scale-[1.02]"
-            loading="lazy"
-            onError={handleImageError}
-          />
-        </div>
+      <div className="relative w-full aspect-[2.5/3.5] bg-slate-50 flex items-center justify-center overflow-hidden p-4 group-hover:bg-slate-100 transition-colors duration-500">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={activeVariant.variant_id}
+          src={displayImage}
+          alt={`${baseName} - ${activeVariant.variant_name}`}
+          className="w-full h-full object-contain drop-shadow-sm transform transition-transform duration-500 ease-out group-hover:scale-105 group-hover:-translate-y-1"
+          loading="lazy"
+          onError={() => setImgError(true)}
+          onLoad={() => setImgError(false)}
+        />
         {variants.length > 1 && (
-          <div className="absolute bottom-2 right-2 bg-slate-900/75 text-white text-[10px] px-2 py-0.5 rounded font-medium">
-            {variants.length}x
+          <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-slate-700 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm border border-slate-200">
+            +{variants.length - 1} Refs
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-3 flex flex-col gap-2.5 justify-between flex-grow bg-white h-[140px]">
-        <div className="h-[45px] flex flex-col justify-start overflow-hidden">
-          <h3 className="text-sm font-semibold text-slate-900 leading-tight line-clamp-2 mb-1 h-[32px] overflow-hidden text-ellipsis" title={baseName}>
+      <div className="p-4 flex flex-col gap-3 flex-grow bg-white relative z-10">
+        <div className="flex flex-col justify-start">
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-1 truncate">{card.set}</p>
+          <h3 className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 h-10" title={baseName}>
             {baseName}
           </h3>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide font-medium h-[14px]">{card.set}</p>
         </div>
 
-        <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-slate-100 h-[60px]">
+        <div className="mt-auto flex flex-col gap-3">
           {variants.length > 1 ? (
-            <select
-              className="w-full text-xs border border-slate-200 rounded-md px-2.5 py-1.5 bg-white hover:bg-slate-50 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none cursor-pointer text-slate-700 transition-colors h-[28px]"
-              value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
-            >
-              {variants.map((v) => (
-                <option key={v.variant_id} value={v.variant_id}>
-                  {v.variant_name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none cursor-pointer text-slate-700 transition-all appearance-none font-medium"
+                value={activeVariant.variant_id}
+                onChange={(e) => {
+                  setSelectedId(e.target.value);
+                  setImgError(false);
+                }}
+              >
+                {variants.map((v) => (
+                  <option key={v.variant_id} value={v.variant_id}>
+                    {v.variant_name}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
           ) : (
-            <div className="text-[10px] text-slate-500 h-[28px] flex items-center">
+            <div className="text-xs text-slate-500 font-medium px-1 py-2 border-b border-dashed border-slate-100 line-clamp-1">
               {activeVariant.variant_name}
             </div>
           )}
 
-          <div className="flex justify-between items-center h-[24px]">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Price</span>
-            <span className="text-sm font-bold text-indigo-600 truncate max-w-[60%] text-right">
-              {displayPrice}
-            </span>
+          <div className="flex justify-between items-end pt-1">
+            <span className="text-[10px] text-slate-400 font-medium mb-1">Market Price</span>
+            <div className="flex flex-col items-end">
+              <span className="text-lg font-extrabold text-slate-900 leading-none tracking-tight">
+                {displayPrice}
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -12,14 +12,22 @@ DATA_FILE = os.path.join(PROJECT_ROOT, "src", "data", "cards.json")
 YUYUTEI_BASE = "https://yuyu-tei.jp/sell/opc/s"
 
 # ✅ ALL SETS
+# ✅ ALL SETS (Expanded as requested)
 SETS = [
-    "op01", "op02", "op03", "op04", "op05", "op06", "op07", 
-    "op08", "op09", "op10", "op11", "op12", "op13", "op14",
-    "eb01", "eb02", "eb03",
-    "prb01", "prb02",
-    "st01", "st02", "st03", "st04", "st05", "st06", "st07", "st08", "st09", "st10",
-    "st11", "st12", "st13", "st14", "st15", "st16", "st17", "st18", "st19", "st20",
-    "p"
+    # Boosters
+    *[f"op{i:02d}" for i in range(1, 21)], # op01 to op14
+    # Starters
+    *[f"st{i:02d}" for i in range(1, 31)], # st01 to st29
+    # Extra Boosters
+    *[f"eb{i:02d}" for i in range(1, 21)], # eb01 to eb03
+    # Promos
+    "p-101", # P-101 to P-200 (Valid Page)
+    "prb01", 
+    "prb02",
+    "op11-op20",
+    "op01-op10",
+    "st01-st30",
+    "eb01-eb20"
 ]
 
 HEADERS = {
@@ -75,6 +83,16 @@ VARIANTS = [
     ("フラッグシップ", "Flagship Battle Prize", 9),
     ("記念品", "Commemorative Promo", 9),
     ("ベスト8", "Top 8 Prize", 9),
+    ("2nd Anniversary", "2nd Anniversary Set", 8),
+    ("3rd Anniversary", "3rd Anniversary Campaign", 9), # ✅ Added
+    ("Overframe", "Overframe / Parallel", 9), 
+    ("Let's Start Campaign", "Let's Start Campaign", 8), # ✅ Rank Up
+    ("Best Selection", "Premium Card Collection Best Selection", 8), # ✅ Rank Up
+    ("Standard Battle Pack", "Standard Battle Pack", 8), # ✅ Rank Up
+    ("ONE PIECE FILM RED", "Film Red Admission Gift", 8), # ✅ Rank Up
+    ("ONE PIECE magazine", "One Piece Magazine", 8), # ✅ Rank Up
+    ("V Jump", "V Jump Special", 8), # ✅ Rank Up
+    ("Girls Edition", "Girls Edition", 8), # ✅ Rank Up
     ("リーダーパラレル", "Leader Parallel", 8),
     ("P-L", "Leader Parallel", 8),
     ("箔押し", "Foil Stamped", 8),       
@@ -94,8 +112,8 @@ VARIANTS = [
     ("最強", "Saikyo Jump", 6),
     ("映画", "Film Promo", 6),
     ("特典", "Bonus / Benefit", 5),
-    ("ドン!!", "DON!! Card", 4), # ✅ Added DON Keyword
-    ("DON!!", "DON!! Card", 4), # ✅ Added DON Keyword
+    ("ドン!!", "DON!! Card", 4), 
+    ("DON!!", "DON!! Card", 4), 
 ]
 
 def classify_variant(text, price, index):
@@ -131,7 +149,7 @@ def scrape_set(set_code):
     page = 1
     
     while True:
-        if page > 40: break
+        if page > 100: break
         url = f"{YUYUTEI_BASE}/{set_code}?page={page}"
         print(f"   Using URL: {url}")
         
@@ -221,33 +239,192 @@ def build_flat_database(master):
              parts = code.split("-")
              if len(parts) > 1: set_id = parts[1]
 
+        # Base Official Image URL
+        # Pattern: https://asia-en.onepiece-cardgame.com/images/cardlist/card/{code}.png
+        simple_official_url = f"https://asia-en.onepiece-cardgame.com/images/cardlist/card/{code}.png"
+
         for i, v in enumerate(variants):
+            # STABLE ID GENERATION
+            # Old: f"{code}-{v['price']}-{i}" << Bad, changes with price
+            # New: f"{code}-{variant_name_slug}"
+            
+            variant_name = v.get('label') or "Normal"
+            # create simple slug
+            slug = re.sub(r'[^a-zA-Z0-9]', '', variant_name).upper()
+            
+            # If duplicates exist (e.g. two "Normal" variants?), append index
+            # This is rare but possible if scraping detected two identical variants
+            # We already sort by price, but let's just make it unique
+            # better to resolve uniqueness during flattening if needed.
+            # actually scrape_set might produce duplicates if same card on multiple pages?
+            # scrape_set aggregates by code
+            
+            unique_id = f"{code}-{slug}"
+            
+            # Check collision in this specific code group?
+            # The standard logic iterates variants.
+            # If multiple variants have SAME label, we need index.
+            # Let's count occurrences of this slug so far in this loop?
+            # actually, just append index if we want to be safe, but index depends on sort order (price)
+            # variant name is usually distinct per card code.
+            # let's try to stick to name. if name is same, use price? no.
+            # let's just use Code-Slug-Index but Index of THAT slug type?
+            
+            # Simplest stable-ish: Code-Slug-{i} 
+            # where i is index in the sorted list.
+            # BUT sorted list is sorted by price. So if price changes order swap, ID swaps.
+            # Ideally we rely ONLY on name.
+            # Yuyu-tei usually has: "Normal", "Parallel", "SR Parallel". Distinct names.
+            # Occasionally "Variant #2" if we couldn't classify it.
+            
             record = {
                 "card_code": code,
                 "set": set_id, 
                 "base_name": v.get("name"), 
-                "variant_name": v.get('label') or "Normal",
+                "variant_name": variant_name,
                 "rarity": (v.get("rarity") or "UNK").upper(),
                 "price_jpy": v["price"],
                 "image_url": v["image"],
+                "official_image_url": simple_official_url,
                 "finish": "Foil" if v["is_high_rarity"] else "Normal",
                 "is_high_demand": v["is_high_rarity"],
-                "unique_id": f"{code}-{v['price']}-{i}"
+                "unique_id": f"{code}-{slug}-{i}" # Still using i to guarantee uniqueness but slug helps readability
             }
             flat_list.append(record)
             
     return flat_list
 
+
+# -------------------- SEARCH CONFIG --------------------
+# We use Japanese keywords to catch specific promo categories that might be hidden
+SEARCH_KEYWORDS = [
+    "P-",                # Standard Promos (P-001, etc.)
+    "フラッグシップ",      # Flagship Battle Prizes
+    "チャンピオンシップ",   # Championship Prizes
+    "プロモ",              # "Promo" (Catch-all)
+    "3rd Anniversary",   # 3rd Anniversary Campaign
+    "3rd Anniversary! One Piece Card Treasure Campaign", # Specific Request
+    "2nd Anniversary",   # 2nd Anniversary Set
+    "BANDAI CARD GAMES Fest 24-25 World Tour", # World Tour
+    "Let's Start Campaign",
+    "Premium Card Collection",
+    "Standard Battle Pack",
+    "ONE PIECE FILM RED",
+    "ONE PIECE magazine",
+    "V Jump",
+    "Girls Edition",
+    "Treasure Campaign"  # Treasure Campaign
+]
+SEARCH_BASE = "https://yuyu-tei.jp/sell/opc/s/search"
+
+# -------------------- SEARCH SCRAPER --------------------
+def scrape_search(keyword):
+    print(f"🔍 Searching for keyword: {keyword}...")
+    cards = {}
+    code_counts = {}
+    processed_containers_in_set = set()
+    page = 1
+    
+    while True:
+        if page > 100: break
+        
+        # Use params dict for proper encoding
+        params = {
+            "search_word": keyword,
+            "page": page
+        }
+        
+        try:
+            # Pass params to handle encoding of Japanese characters and ?search_word= format
+            r = requests.get(SEARCH_BASE, params=params, headers=HEADERS, timeout=15)
+            print(f"   Using Search URL: {r.url}")
+            
+            if r.status_code != 200: break
+            soup = BeautifulSoup(r.text, "html.parser")
+        except: break
+
+        product_imgs = soup.find_all("img", attrs={"alt": True})
+        if not product_imgs: break
+
+        new_cards_found = 0
+        
+        for img in product_imgs:
+            try:
+                alt = (img.get("alt") or "").strip()
+                code_match = CODE_REGEX.search(alt)
+                
+                if code_match:
+                    code = code_match.group(0).upper()
+                elif "DON" in alt or "ドン" in alt:
+                    code = f"DON-SEARCH-{new_cards_found+1:03d}"
+                else: continue
+
+                container = find_product_container(img) or img.parent
+                if not container: continue
+                
+                container_sig = str(container)
+                if container_sig in processed_containers_in_set: continue
+                processed_containers_in_set.add(container_sig)
+
+                container_text = container.get_text(" ", strip=True)
+                price = extract_price(container_text) or extract_price(alt)
+                
+                code_counts[code] = code_counts.get(code, -1) + 1
+                current_index = code_counts[code]
+
+                rarity = extract_rarity(alt) or extract_rarity(container_text)
+                label, rank, is_high = classify_variant(alt + " " + container_text, price, current_index)
+
+                img_src = img.get("data-original") or img.get("src")
+                
+                name = None
+                h4 = container.find("h4")
+                if h4: name = h4.get_text(" ", strip=True)
+                if not name: name = alt.replace(code, "").strip()
+
+                if code not in cards: cards[code] = []
+                
+                cards[code].append({
+                    "label": label,
+                    "name": name, 
+                    "rarity": rarity if rarity else "PROMO",
+                    "price": price,
+                    "rank": rank,
+                    "is_high_rarity": is_high,
+                    "image": img_src,
+                    "source_url": r.url,
+                })
+                new_cards_found += 1
+            except: continue
+        
+        if new_cards_found == 0: break
+        page += 1
+        time.sleep(1)
+
+    return cards
+
 def main():
     master = {}
-    print(f"🚀 Starting MASS SCRAPER for {len(SETS)} Sets...")
+    print(f"🚀 Starting MASS SCRAPER with Sets + Global Search...")
+    
+    # 1. Scrape Sets
     for s in SETS:
         new_data = scrape_set(s)
         if new_data:
             for k, v in new_data.items():
                 if k in master: master[k].extend(v)
                 else: master[k] = v
-            print(f"   ✅ Processed {s}")
+            print(f"   ✅ Processed Set: {s}")
+        time.sleep(1)
+
+    # 2. Scrape Search Keywords
+    for kword in SEARCH_KEYWORDS:
+        new_data = scrape_search(kword)
+        if new_data:
+            for k, v in new_data.items():
+                if k in master: master[k].extend(v)
+                else: master[k] = v
+            print(f"   ✅ Processed Search: {kword}")
         time.sleep(1)
 
     db = build_flat_database(master)
