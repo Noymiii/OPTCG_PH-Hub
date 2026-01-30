@@ -660,7 +660,7 @@ export default function Home() {
                             return (
                               <div key={flatCard.unique_id} className="relative group h-full">
                                 {/* Card Actions Overlay (Hover) */}
-                                <div className="absolute -top-2 -right-2 z-30 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 scale-95 group-hover:scale-100">
+                                <div className="absolute -top-2 -right-2 z-30 flex flex-col gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-200 scale-100 lg:scale-95 lg:group-hover:scale-100">
                                   <button
                                     onClick={() => addToCollection(flatCard.unique_id)}
                                     className="w-8 h-8 bg-indigo-600 text-white rounded-full shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center hover:bg-indigo-700 transition-colors"
@@ -793,7 +793,7 @@ export default function Home() {
                                   <div className="font-bold text-indigo-600">₱{card.subtotal?.toLocaleString()}</div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="grid grid-cols-2 gap-2 mt-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                   <button onClick={() => removeFromCollection(card.unique_id)} className="bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 py-1.5 rounded-lg text-xs font-bold transition-colors">
                                     <Minus size={14} className="mx-auto" />
                                   </button>
