@@ -96,6 +96,7 @@ export default function Home() {
   const [newCard, setNewCard] = useState<Partial<FlatCard>>({
     set: "OP01", rarity: "P-SEC", price_jpy: 0, finish: "Foil"
   });
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   // FIX: Added dependency array [] to stop the infinite loop error
   useEffect(() => {
@@ -433,16 +434,21 @@ export default function Home() {
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 h-16 flex justify-between items-center gap-4">
 
           {/* Logo & Nav */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-indigo-200 shadow-lg">
                 <Layers size={20} className="stroke-[2.5]" />
               </div>
-              <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 hidden sm:block">
                 OPTCG<span className="text-indigo-600">Hub</span>
+              </h1>
+              {/* Mobile Logo Compact */}
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:hidden">
+                <span className="text-indigo-600">Hub</span>
               </h1>
             </div>
 
+            {/* Desktop Nav - Hidden on Mobile */}
             <nav className="hidden md:flex bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
               <button
                 onClick={() => setActiveTab('market')}
@@ -471,17 +477,18 @@ export default function Home() {
           </div>
 
           {/* Stats & Actions */}
-          <div className="flex items-center gap-6">
-            <div className="hidden lg:flex flex-col items-end">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Portfolio Value</span>
-              <span className="font-mono text-lg font-bold text-slate-900 leading-none">₱{portfolioStats.totalValuePhp.toLocaleString()}</span>
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:block">Portfolio Value</span>
+              {/* Mobile Value - Always Visible */}
+              <span className="font-mono text-sm sm:text-lg font-bold text-slate-900 leading-none">₱{portfolioStats.totalValuePhp.toLocaleString()}</span>
             </div>
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg flex items-center gap-2 transition-transform active:scale-95"
+              className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl shadow-lg flex items-center gap-2 transition-transform active:scale-95"
             >
-              <PenTool size={14} /> <span>New Card</span>
+              <PenTool size={14} /> <span className="hidden sm:inline">New Card</span>
             </button>
           </div>
         </div>
@@ -494,8 +501,39 @@ export default function Home() {
         {activeTab === 'market' && (
           <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-            {/* SIDEBAR FILTER */}
-            <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar pr-2">
+            {/* MOBILE FILTER TOGGLE */}
+            <div className="w-full lg:hidden mb-2">
+              <button
+                onClick={() => setIsMobileFiltersOpen(true)}
+                className="w-full flex items-center justify-between bg-white border border-slate-200 px-4 py-3 rounded-xl shadow-sm text-sm font-bold text-slate-700 active:bg-slate-50 transition-colors"
+              >
+                <span className="flex items-center gap-2"><Filter size={16} /> Filters & Search</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            {/* SIDEBAR FILTER (Responsive Modal) */}
+            {/* On Mobile: Fixed Modal. On Desktop: Sticky Sidebar. */}
+            <div className={`
+                fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity duration-300
+                ${isMobileFiltersOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+            `} onClick={() => setIsMobileFiltersOpen(false)} />
+
+            <aside className={`
+                flex-col gap-6 
+                lg:w-72 xl:w-80 flex-shrink-0 
+                lg:flex lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:custom-scrollbar lg:pr-2 lg:bg-transparent lg:shadow-none lg:p-0
+                
+                fixed inset-y-0 right-0 w-[85vw] max-w-sm bg-white shadow-2xl z-[70] p-6 overflow-y-auto transition-transform duration-300 ease-out
+                ${isMobileFiltersOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+            `}>
+              <div className="flex items-center justify-between lg:hidden mb-6">
+                <h2 className="text-xl font-black text-slate-900">Filters</h2>
+                <button onClick={() => setIsMobileFiltersOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500">
+                  <X size={20} />
+                </button>
+              </div>
+
 
               {/* Search */}
               <div className="relative group">
@@ -775,6 +813,34 @@ export default function Home() {
             )}
           </div>
         )}
+
+
+        {/* --- MOBILE BOTTOM NAV --- */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex md:hidden justify-around items-center h-16 z-[40] pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <button
+            onClick={() => setActiveTab('market')}
+            className={`flex flex-col items-center gap-1 w-full h-full justify-center active:scale-95 transition-transform ${activeTab === 'market' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <div className={`p-1 rounded-lg ${activeTab === 'market' ? 'bg-indigo-50' : ''}`}>
+              <Layers size={20} strokeWidth={activeTab === 'market' ? 2.5 : 2} />
+            </div>
+            <span className="text-[10px] font-bold">Market</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('collection')}
+            className={`relative flex flex-col items-center gap-1 w-full h-full justify-center active:scale-95 transition-transform ${activeTab === 'collection' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <div className={`p-1 rounded-lg ${activeTab === 'collection' ? 'bg-indigo-50' : ''}`}>
+              <Wallet size={20} strokeWidth={activeTab === 'collection' ? 2.5 : 2} />
+            </div>
+            <span className="text-[10px] font-bold">Collection</span>
+            {portfolioStats.totalCards > 0 && (
+              <span className="absolute top-2 right-[25%] bg-rose-500 text-white text-[9px] font-black min-w-[1rem] h-4 px-1 flex items-center justify-center rounded-full border-2 border-white">
+                {portfolioStats.totalCards > 99 ? '99+' : portfolioStats.totalCards}
+              </span>
+            )}
+          </button>
+        </div>
 
 
         {/* MODAL */}
