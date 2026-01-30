@@ -25,7 +25,7 @@ interface Props {
 }
 
 export default function CardGroup({ card }: Props) {
-  // 1. Memoize variants
+
   const variants = useMemo(() => {
     if (!card || !card.variants) return [];
 
@@ -42,7 +42,6 @@ export default function CardGroup({ card }: Props) {
   const [selectedId, setSelectedId] = useState<string>('');
   const [imgError, setImgError] = useState(false);
 
-  // 2. Derive active variant
   // If selectedId is not found in variants, fall back to the first variant.
   const activeVariant = useMemo(() => {
     if (variants.length === 0) return null;
@@ -51,9 +50,10 @@ export default function CardGroup({ card }: Props) {
 
   if (!card || !activeVariant) return null;
 
-  // 3. Computed values
   const imageUrl = activeVariant.image_url;
-  const displayImage = (!imgError && imageUrl) ? imageUrl : 'https://placehold.co/400x560/png?text=No+Image';
+  const highResUrl = imageUrl ? imageUrl.replace('100_140', '200_280') : '';
+
+  const displayImage = (!imgError && highResUrl) ? highResUrl : ((!imgError && imageUrl) ? imageUrl : 'https://placehold.co/200x280/png?text=No+Image');
 
   const phpPrice = Math.ceil(activeVariant.price_jpy * 0.35);
   const displayPrice = new Intl.NumberFormat('en-PH', {

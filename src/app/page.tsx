@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Layers, CheckSquare, Square, Plus, Minus, Wallet, Trash2, PenTool, X, ChevronDown, ChevronRight } from 'lucide-react';
 import CardGroup from '@/src/components/CardGroup';
+import CollectionCard from '@/src/components/CollectionCard';
 import cardRawData from '@/src/data/cards.json';
 
 // --- TYPES ---
@@ -148,18 +149,7 @@ export default function Home() {
           if (pieces.length >= 3) {
             // Try to reconstruction Code and Slug
             // This is tricky if Code has dashes.
-            // Heuristic: Last part is index. Middle part is slug. First part(s) is Code.
-
-            // Better approach: Since we know the previous logic
-            // Try finding a card with same code?
-            // Let's assume CODE is standard format OP01-001 or P-001
-
-            // Simplest robust heal: Search all cards for "closest string match"? No, too slow.
-            // let match = flatCards.find(c => id.startsWith(c.card_code)); // Weak
-
-            // Let's rely on the assumption that we haven't changed the SLUG generation logic.
-            // ID: OP01-001-PARALLELAA-2
-            // remove the last -{digit}
+            // Heuristic attempt to find match by base ID
             const idBase = id.replace(/-\d+$/, '');
 
             // Look for any card whose unique_id starts with this base
@@ -366,26 +356,18 @@ export default function Home() {
     let totalValueYen = 0;
     const priceMap = new Map(allCards.map(c => [c.unique_id, c.price_jpy]));
 
-    console.log("DEBUG: Calculating Portfolio", {
-      entries: Object.entries(portfolio).length,
-      priceMapSize: priceMap.size,
-      firstPortfolioItem: Object.entries(portfolio)[0]
-    });
+    // Calculate portfolio stats
 
     Object.entries(portfolio).forEach(([id, qty]) => {
       const price = priceMap.get(id);
       if (price === undefined) {
-        console.warn(`DEBUG: Missing price for ID: ${id}`);
+        // console.warn(`Missing price for ID: ${id}`);
       }
       totalCards += qty;
       totalValueYen += (price || 0) * qty;
     });
 
-    console.log("DEBUG: Result", {
-      totalCards,
-      totalValueYen,
-      php: Math.ceil(totalValueYen * JPY_TO_PHP_RATE)
-    });
+
 
     return {
       totalCards,
@@ -756,55 +738,15 @@ export default function Home() {
                         <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{RARITY_HEADERS[rarityKey] || rarityKey}</h3>
                         <span className="h-px bg-slate-200 flex-1"></span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                        {cards.map(card => {
-                          const originalUrl = card.image_url || card.official_image_url || 'https://placehold.co/400x560/png?text=No+Image';
-                          const highResUrl = originalUrl.replace('100_140', '400_560');
-
-                          return (
-                            <div key={card.unique_id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                              <div className="relative aspect-[2.5/3.5] bg-slate-50 p-4">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={highResUrl}
-                                  className="w-full h-full object-contain drop-shadow-md"
-                                  alt={card.name}
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    if (!target.src.includes(originalUrl)) {
-                                      target.src = originalUrl;
-                                    } else {
-                                      target.src = 'https://placehold.co/400x560/png?text=Image+N/A';
-                                    }
-                                  }}
-                                />
-                                <div className="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">x{card.qty}</div>
-                              </div>
-                              <div className="p-4">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <div className="text-[10px] font-mono font-bold text-slate-400">{card.card_code}</div>
-                                    <div className="text-xs font-bold text-slate-800 line-clamp-1">{card.variant_name}</div>
-                                  </div>
-                                </div>
-                                <div className="flex items-end justify-between border-t border-slate-50 pt-3 mt-2">
-                                  <div className="text-[10px] text-slate-400 font-medium">Total Value</div>
-                                  <div className="font-bold text-indigo-600">₱{card.subtotal?.toLocaleString()}</div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 mt-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => removeFromCollection(card.unique_id)} className="bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                                    <Minus size={14} className="mx-auto" />
-                                  </button>
-                                  <button onClick={() => addToCollection(card.unique_id)} className="bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                                    <Plus size={14} className="mx-auto" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 sm:gap-6">
+                        {cards.map(card => (
+                          <CollectionCard
+                            key={card.unique_id}
+                            card={card}
+                            onAdd={addToCollection}
+                            onRemove={removeFromCollection}
+                          />
+                        ))}
                       </div>
                     </div>
                   );
