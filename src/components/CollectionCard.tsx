@@ -78,9 +78,12 @@ export default function CollectionCard({ card, onAdd, onRemove }: CollectionCard
             <div className="p-4 flex flex-col gap-3 flex-grow bg-white relative z-10">
                 <div className="flex flex-col justify-start">
                     <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-1 truncate">{card.set}</p>
-                    <h3 className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 h-10" title={card.variant_name}>
-                        {card.variant_name}
+                    <h3 className="text-sm font-bold text-slate-800 leading-snug line-clamp-2" title={card.base_name || card.name}>
+                        {card.base_name || card.name || card.variant_name}
                     </h3>
+                    <div className="text-xs text-slate-500 font-medium line-clamp-1 h-5">
+                        {card.variant_name}
+                    </div>
                 </div>
 
                 <div className="mt-auto flex flex-col gap-3">

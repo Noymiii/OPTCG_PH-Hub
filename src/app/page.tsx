@@ -378,11 +378,20 @@ export default function Home() {
 
   const groupedPortfolio = useMemo(() => {
     const ids = Object.keys(portfolio);
-    const collectionList = allCards.filter(c => ids.includes(c.unique_id)).map(c => ({
-      ...c,
-      qty: portfolio[c.unique_id],
-      subtotal: Math.ceil(c.price_jpy * JPY_TO_PHP_RATE) * portfolio[c.unique_id]
-    }));
+    const collectionList = allCards
+      .filter(c => ids.includes(c.unique_id))
+      .filter(c => {
+        if (!searchTerm) return true;
+        const lower = searchTerm.toLowerCase();
+        return (c.base_name || '').toLowerCase().includes(lower) ||
+          (c.variant_name || '').toLowerCase().includes(lower) ||
+          (c.card_code || '').toLowerCase().includes(lower);
+      })
+      .map(c => ({
+        ...c,
+        qty: portfolio[c.unique_id],
+        subtotal: Math.ceil(c.price_jpy * JPY_TO_PHP_RATE) * portfolio[c.unique_id]
+      }));
 
     // Sort collection list too
     collectionList.sort((a, b) => {
@@ -407,7 +416,7 @@ export default function Home() {
       }
     });
     return groups;
-  }, [portfolio, allCards]);
+  }, [portfolio, allCards, searchTerm]);
 
   return (
     <main className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
@@ -698,6 +707,22 @@ export default function Home() {
         {/* COLLECTION TAB (Clean) */}
         {activeTab === 'collection' && (
           <div className="max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-300">
+            {/* Collection Search */}
+            <div className="mb-6">
+              <div className="relative max-w-md mx-auto sm:mx-0">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Search size={18} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search your collection..."
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all placeholder:text-slate-400 shadow-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
               <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white shadow-xl shadow-indigo-200">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-200 mb-2">Total Value</h3>
