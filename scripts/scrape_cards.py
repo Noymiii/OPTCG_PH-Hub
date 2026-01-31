@@ -19,7 +19,7 @@ SETS = [
     # Starters
     *[f"st{i:02d}" for i in range(1, 31)], # st01 to st29
     # Extra Boosters
-    *[f"eb{i:02d}" for i in range(1, 21)], # eb01 to eb03
+    *[f"eb{i:02d}" for i in range(1, 21)], # eb01 to eb20
     # Promos
     "p-101", # P-101 to P-200 (Valid Page)
     "prb01", 
